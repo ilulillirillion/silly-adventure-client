@@ -8,7 +8,78 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 console.log('Response Refinement extension loading...');
 console.log('Extension path:', extensionFolderPath);
 
-// Default instruction blocks and steps remain the same...
+// Include HTML content directly
+const settingsHtml = `
+<div class="response-refinement-settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>Response Refinement</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+            <!-- Instruction Blocks Section -->
+            <div class="refinement-section">
+                <h3>Instruction Blocks</h3>
+                <div id="instruction_blocks_list" class="list-container"></div>
+                <div class="flex-container">
+                    <input id="add_instruction_block" class="menu_button" type="submit" value="Add Instruction Block" />
+                </div>
+            </div>
+
+            <hr class="sysHR" />
+
+            <!-- Refinement Steps Section -->
+            <div class="refinement-section">
+                <h3>Refinement Steps</h3>
+                <div id="refinement_steps_list" class="list-container"></div>
+                <div class="flex-container">
+                    <input id="add_refinement_step" class="menu_button" type="submit" value="Add Refinement Step" />
+                </div>
+            </div>
+
+            <hr class="sysHR" />
+
+            <!-- Global Settings -->
+            <div class="refinement-section">
+                <div class="flex-container">
+                    <input id="enable_refinement" type="checkbox" />
+                    <label for="enable_refinement">Enable Response Refinement</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="instruction_block_template">
+    <div class="instruction-block-item">
+        <div class="flex-container">
+            <input type="checkbox" class="instruction-enabled" />
+            <input type="text" class="instruction-label text_pole" placeholder="Label" />
+            <div class="menu_button instruction-edit"><i class="fa-solid fa-edit"></i></div>
+            <div class="menu_button instruction-delete"><i class="fa-solid fa-trash"></i></div>
+        </div>
+        <textarea class="instruction-content text_pole wide" rows="4" placeholder="Enter instruction content..."></textarea>
+    </div>
+</template>
+
+<template id="refinement_step_template">
+    <div class="refinement-step-item">
+        <div class="flex-container">
+            <input type="checkbox" class="step-enabled" />
+            <input type="text" class="step-label text_pole" placeholder="Step Label" />
+            <div class="menu_button step-edit"><i class="fa-solid fa-edit"></i></div>
+            <div class="menu_button step-delete"><i class="fa-solid fa-trash"></i></div>
+        </div>
+        <div class="step-instructions">
+            <h4>Step Instructions</h4>
+            <div class="step-instruction-list"></div>
+            <div class="menu_button add-step-instruction">Add Instruction</div>
+        </div>
+    </div>
+</template>
+`;
+
+// Rest of the code remains exactly the same...
 const defaultInstructionBlocks = {
     'review_response': {
         label: 'Review Response',
@@ -104,6 +175,10 @@ function renderInstructionBlocks() {
     
     Object.entries(extensionSettings.instructionBlocks).forEach(([id, block]) => {
         const template = document.querySelector("#instruction_block_template");
+        if (!template) {
+            console.error('Instruction block template not found');
+            return;
+        }
         const clone = document.importNode(template.content, true);
         
         const item = $(clone.querySelector(".instruction-block-item"));
@@ -124,6 +199,10 @@ function renderRefinementSteps() {
     
     Object.entries(extensionSettings.refinementSteps).forEach(([id, step]) => {
         const template = document.querySelector("#refinement_step_template");
+        if (!template) {
+            console.error('Refinement step template not found');
+            return;
+        }
         const clone = document.importNode(template.content, true);
         
         const item = $(clone.querySelector(".refinement-step-item"));
@@ -392,12 +471,11 @@ jQuery(async () => {
     console.log('Initializing Response Refinement extension...');
     
     try {
-        // Instead of loading HTML from file, we'll use the HTML directly from example.html
-        const settingsHtml = document.createElement('div');
-        settingsHtml.innerHTML = await fetch('example.html').then(r => r.text());
-        
         console.log('Adding settings HTML to UI...');
         $("#extensions_settings2").append(settingsHtml);
+        
+        // Wait for templates to be in DOM
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         console.log('Creating status indicator...');
         createStatusIndicator();
