@@ -221,23 +221,25 @@ async function refineResponse(response, context) {
         
         console.log('Step instructions:', step.instructions);
         
-        // Create system message for refinement
-        const systemMessage = `You are a response refinement agent. Below is a complete response that needs to be refined. Your task is to analyze this response and provide a refined version that follows the refinement instructions. Do not continue or extend the response - only refine what is already there.
-
-Response to refine:
-"""
-${currentResponse}
-"""
-
-Refinement instructions:
-${step.instructions}
-
-Provide your complete refined version of the response. Do not add any explanations or notes - only output the refined response text.`;
-        
         try {
             console.log('Generating refined response...');
-            // Generate refined response
-            const refinedResponse = await generateQuietPrompt(systemMessage);
+            // Generate refined response with minimal context
+            const prompt = [
+                'System: You are a response refinement agent. Your task is to refine an existing response according to specific instructions. Do not generate new content or continue the response - only refine what is provided.',
+                '',
+                'Original response:',
+                '"""',
+                currentResponse,
+                '"""',
+                '',
+                'Instructions:',
+                step.instructions,
+                '',
+                'Assistant: Here is the refined version of the response:',
+                ''
+            ].join('\n');
+            
+            const refinedResponse = await generateQuietPrompt(prompt);
             
             if (refinedResponse && refinedResponse.trim()) {
                 console.log('Response refined successfully');
