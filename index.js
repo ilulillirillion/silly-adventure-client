@@ -145,13 +145,26 @@ function renderRefinementSteps() {
     });
 }
 
+// Create status indicator
+function createStatusIndicator() {
+    const indicator = $('<div id="refinement_status" style="display: none; position: fixed; bottom: 10px; right: 10px; background-color: var(--accent-color); color: var(--text-color); padding: 10px; border-radius: 5px; z-index: 1000;"></div>');
+    $('body').append(indicator);
+    return indicator;
+}
+
 async function refineResponse(response, context) {
     if (!extensionSettings.enabled) return response;
     
+    const statusIndicator = $('#refinement_status');
     let currentResponse = response;
+    let stepCount = Object.values(extensionSettings.refinementSteps).filter(step => step.enabled).length;
+    let currentStep = 0;
     
     for (const [stepId, step] of Object.entries(extensionSettings.refinementSteps)) {
         if (!step.enabled) continue;
+        
+        currentStep++;
+        statusIndicator.text(`Refining response: Step ${currentStep}/${stepCount} (${step.label})`).show();
         
         // Combine enabled instructions for this step
         const instructions = step.instructions
@@ -175,7 +188,13 @@ async function refineResponse(response, context) {
             }
         } catch (error) {
             console.error(`Error in refinement step ${step.label}:`, error);
+            toastr.error(`Failed to refine response in step: ${step.label}`);
         }
+    }
+    
+    statusIndicator.hide();
+    if (currentResponse !== response) {
+        toastr.success('Response has been refined');
     }
     
     return currentResponse;
@@ -325,7 +344,11 @@ function addInstructionToStep(event) {
 // Initialize
 jQuery(async () => {
     const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
-    $("#extensions_settings").append(settingsHtml);
+    // Add to extensions_settings2 since this is a UI-related extension
+    $("#extensions_settings2").append(settingsHtml);
+    
+    // Create status indicator
+    createStatusIndicator();
     
     // Event listeners
     $("#enable_refinement").on("change", onEnableChange);
@@ -349,4 +372,7 @@ jQuery(async () => {
     });
     
     await loadSettings();
+    
+    // Show initial setup message
+    toastr.success('Response Refinement extension loaded! Configure settings in the Extensions tab.');
 });
