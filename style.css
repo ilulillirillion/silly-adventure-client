@@ -1,0 +1,112 @@
+.response-refinement-settings {
+    margin: 10px;
+}
+
+.refinement-section {
+    margin: 15px 0;
+}
+
+.refinement-section h3 {
+    margin-bottom: 10px;
+}
+
+.list-container {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 10px 0;
+}
+
+.instruction-block-item,
+.refinement-step-item {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    margin: 10px 0;
+    padding: 10px;
+}
+
+.instruction-block-item .flex-container,
+.refinement-step-item .flex-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.instruction-label,
+.step-label {
+    flex-grow: 1;
+}
+
+.instruction-content {
+    width: 100%;
+    margin-top: 5px;
+    resize: vertical;
+}
+
+.step-instructions {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: var(--background-lightest);
+    border-radius: 5px;
+}
+
+.step-instruction-list {
+    margin: 10px 0;
+}
+
+.step-instruction-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 5px 0;
+    padding: 5px;
+    background-color: var(--background-light);
+    border-radius: 3px;
+}
+
+.menu_button {
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 5px;
+    background-color: var(--button-color);
+    border: 1px solid var(--border-color);
+}
+
+.menu_button:hover {
+    background-color: var(--button-hover-color);
+}
+
+.menu_button.instruction-edit,
+.menu_button.instruction-delete,
+.menu_button.step-edit,
+.menu_button.step-delete {
+    padding: 5px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.instruction-delete,
+.step-delete {
+    color: var(--error-text-color);
+}
+
+.text_pole {
+    background-color: var(--background-lightest);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 5px;
+    color: var(--text-color);
+}
+
+.text_pole.wide {
+    width: calc(100% - 12px);
+}
+
+.add-step-instruction {
+    margin-top: 10px;
+    width: fit-content;
+}
