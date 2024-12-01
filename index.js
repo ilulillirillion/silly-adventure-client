@@ -80,18 +80,64 @@ const defaultSettings = {
 
 let extensionSettings = extension_settings[extensionName];
 
+// Migrate old settings to new format
+function migrateSettings(settings) {
+    console.log('Checking if settings migration is needed...');
+    
+    // If refinementSteps is not an array, we need to migrate
+    if (settings && settings.refinementSteps && !Array.isArray(settings.refinementSteps)) {
+        console.log('Migrating settings from old format...');
+        
+        // Convert old object format to new array format
+        const oldSteps = settings.refinementSteps;
+        settings.refinementSteps = [];
+        
+        // Add any existing steps that can be converted
+        Object.entries(oldSteps).forEach(([id, step]) => {
+            if (step && typeof step === 'object') {
+                settings.refinementSteps.push({
+                    label: step.label || 'Unnamed Step',
+                    enabled: step.enabled !== undefined ? step.enabled : true,
+                    instructions: step.instructions || ''
+                });
+            }
+        });
+        
+        // If no valid steps were migrated, use defaults
+        if (settings.refinementSteps.length === 0) {
+            settings.refinementSteps = [...defaultRefinementSteps];
+        }
+        
+        console.log('Settings migrated to new format:', settings);
+    }
+    
+    return settings;
+}
+
 // Load or initialize settings
 async function loadSettings() {
     console.log('Loading Response Refinement settings...');
     extension_settings[extensionName] = extension_settings[extensionName] || {};
+    
+    // Initialize with defaults if empty
     if (Object.keys(extension_settings[extensionName]).length === 0) {
         console.log('Initializing default settings...');
         Object.assign(extension_settings[extensionName], defaultSettings);
     }
+    
+    // Migrate settings if needed
+    extension_settings[extensionName] = migrateSettings(extension_settings[extensionName]);
+    
     extensionSettings = extension_settings[extensionName];
     console.log('Current settings:', extensionSettings);
     
     $("#enable_refinement").prop("checked", extensionSettings.enabled);
+    
+    // Ensure refinementSteps is always an array
+    if (!Array.isArray(extensionSettings.refinementSteps)) {
+        console.log('Resetting refinement steps to defaults...');
+        extensionSettings.refinementSteps = [...defaultRefinementSteps];
+    }
     
     // Populate refinement steps
     renderRefinementSteps();
@@ -101,6 +147,11 @@ function renderRefinementSteps() {
     console.log('Rendering refinement steps...');
     const container = $("#refinement_steps_list");
     container.empty();
+    
+    if (!Array.isArray(extensionSettings.refinementSteps)) {
+        console.error('refinementSteps is not an array:', extensionSettings.refinementSteps);
+        return;
+    }
     
     extensionSettings.refinementSteps.forEach((step, index) => {
         const template = document.querySelector("#refinement_step_template");
