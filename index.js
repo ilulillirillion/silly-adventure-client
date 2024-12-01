@@ -392,9 +392,11 @@ jQuery(async () => {
     console.log('Initializing Response Refinement extension...');
     
     try {
-        console.log('Loading settings HTML...');
-        const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
-        console.log('Settings HTML loaded, appending to UI...');
+        // Instead of loading HTML from file, we'll use the HTML directly from example.html
+        const settingsHtml = document.createElement('div');
+        settingsHtml.innerHTML = await fetch('example.html').then(r => r.text());
+        
+        console.log('Adding settings HTML to UI...');
         $("#extensions_settings2").append(settingsHtml);
         
         console.log('Creating status indicator...');
