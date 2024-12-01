@@ -336,13 +336,31 @@ jQuery(async () => {
                 return;
             }
             
-            console.log('Processing message for refinement...');
-            const refinedResponse = await refineResponse(data.message);
-            if (refinedResponse !== data.message) {
-                console.log('Message was refined, updating...');
-                data.message = refinedResponse;
-            } else {
-                console.log('No refinement needed');
+            try {
+                console.log('Processing message for refinement...');
+                const refinedResponse = await refineResponse(data.message);
+                if (refinedResponse !== data.message) {
+                    console.log('Message was refined, updating...');
+                    // Update both the data object and the chat context
+                    data.message = refinedResponse;
+                    
+                    // Get the chat context
+                    const context = getContext();
+                    if (context.chat && Array.isArray(context.chat)) {
+                        // Find and update the last message
+                        const lastMessage = context.chat[context.chat.length - 1];
+                        if (lastMessage) {
+                            lastMessage.mes = refinedResponse;
+                            // Force a chat update
+                            eventSource.emit('chatUpdated', {});
+                        }
+                    }
+                } else {
+                    console.log('No refinement needed');
+                }
+            } catch (error) {
+                console.error('Error in message refinement:', error);
+                toastr.error('Failed to refine message');
             }
         });
         
