@@ -21,6 +21,7 @@ const settingsHtml = `
                 <div id="refinement_steps_list" class="list-container"></div>
                 <div class="flex-container">
                     <input id="add_refinement_step" class="menu_button" type="submit" value="Add Refinement Step" />
+                    <input id="reset_refinement" class="menu_button" type="submit" value="Reset to Defaults" />
                 </div>
             </div>
 
@@ -80,6 +81,17 @@ const defaultSettings = {
 
 let extensionSettings = extension_settings[extensionName];
 
+// Reset settings to defaults
+function resetSettings() {
+    console.log('Resetting settings to defaults...');
+    extension_settings[extensionName] = JSON.parse(JSON.stringify(defaultSettings));
+    extensionSettings = extension_settings[extensionName];
+    saveSettingsDebounced();
+    renderRefinementSteps();
+    $("#enable_refinement").prop("checked", extensionSettings.enabled);
+    toastr.success('Settings reset to defaults');
+}
+
 // Migrate old settings to new format
 function migrateSettings(settings) {
     console.log('Checking if settings migration is needed...');
@@ -105,7 +117,7 @@ function migrateSettings(settings) {
         
         // If no valid steps were migrated, use defaults
         if (settings.refinementSteps.length === 0) {
-            settings.refinementSteps = [...defaultRefinementSteps];
+            settings.refinementSteps = JSON.parse(JSON.stringify(defaultRefinementSteps));
         }
         
         console.log('Settings migrated to new format:', settings);
@@ -122,7 +134,7 @@ async function loadSettings() {
     // Initialize with defaults if empty
     if (Object.keys(extension_settings[extensionName]).length === 0) {
         console.log('Initializing default settings...');
-        Object.assign(extension_settings[extensionName], defaultSettings);
+        Object.assign(extension_settings[extensionName], JSON.parse(JSON.stringify(defaultSettings)));
     }
     
     // Migrate settings if needed
@@ -136,7 +148,7 @@ async function loadSettings() {
     // Ensure refinementSteps is always an array
     if (!Array.isArray(extensionSettings.refinementSteps)) {
         console.log('Resetting refinement steps to defaults...');
-        extensionSettings.refinementSteps = [...defaultRefinementSteps];
+        extensionSettings.refinementSteps = JSON.parse(JSON.stringify(defaultRefinementSteps));
     }
     
     // Populate refinement steps
@@ -210,7 +222,11 @@ async function refineResponse(response, context) {
         console.log('Step instructions:', step.instructions);
         
         // Create system message for refinement
-        const systemMessage = `You are a response refinement agent. Your task is to refine the following response according to these instructions:\n\n${step.instructions}\n\nProvide your refined version of the response, or return the original if it already meets all requirements.`;
+        const systemMessage = `You are a response refinement agent. Your task is to refine the following response according to these instructions:
+
+${step.instructions}
+
+Provide your refined version of the response, or return the original if it already meets all requirements.`;
         
         try {
             console.log('Generating refined response...');
@@ -306,6 +322,7 @@ jQuery(async () => {
         // Event listeners
         $("#enable_refinement").on("change", onEnableChange);
         $("#add_refinement_step").on("click", addNewRefinementStep);
+        $("#reset_refinement").on("click", resetSettings);
         
         $(document).on("change", ".refinement-step-item input, .refinement-step-item textarea", onRefinementStepChange);
         $(document).on("click", ".step-delete", deleteRefinementStep);
