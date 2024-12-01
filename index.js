@@ -2,11 +2,9 @@ import { extension_settings, getContext, loadExtensionSettings } from "../../../
 import { saveSettingsDebounced, eventSource, event_types, generateQuietPrompt } from "../../../../script.js";
 
 const extensionName = "response-refinement";
-const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
 // Add debug logging
 console.log('Response Refinement extension loading...');
-console.log('Extension path:', extensionFolderPath);
 
 // Include HTML content directly
 const settingsHtml = `
@@ -17,17 +15,6 @@ const settingsHtml = `
             <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
         </div>
         <div class="inline-drawer-content">
-            <!-- Instruction Blocks Section -->
-            <div class="refinement-section">
-                <h3>Instruction Blocks</h3>
-                <div id="instruction_blocks_list" class="list-container"></div>
-                <div class="flex-container">
-                    <input id="add_instruction_block" class="menu_button" type="submit" value="Add Instruction Block" />
-                </div>
-            </div>
-
-            <hr class="sysHR" />
-
             <!-- Refinement Steps Section -->
             <div class="refinement-section">
                 <h3>Refinement Steps</h3>
@@ -50,99 +37,44 @@ const settingsHtml = `
     </div>
 </div>
 
-<template id="instruction_block_template">
-    <div class="instruction-block-item">
-        <div class="flex-container">
-            <input type="checkbox" class="instruction-enabled" />
-            <input type="text" class="instruction-label text_pole" placeholder="Label" />
-            <div class="menu_button instruction-edit"><i class="fa-solid fa-edit"></i></div>
-            <div class="menu_button instruction-delete"><i class="fa-solid fa-trash"></i></div>
-        </div>
-        <textarea class="instruction-content text_pole wide" rows="4" placeholder="Enter instruction content..."></textarea>
-    </div>
-</template>
-
 <template id="refinement_step_template">
     <div class="refinement-step-item">
         <div class="flex-container">
             <input type="checkbox" class="step-enabled" />
             <input type="text" class="step-label text_pole" placeholder="Step Label" />
-            <div class="menu_button step-edit"><i class="fa-solid fa-edit"></i></div>
             <div class="menu_button step-delete"><i class="fa-solid fa-trash"></i></div>
         </div>
-        <div class="step-instructions">
-            <h4>Step Instructions</h4>
-            <div class="step-instruction-list"></div>
-            <div class="menu_button add-step-instruction">Add Instruction</div>
+        <div class="step-content">
+            <textarea class="step-instructions text_pole wide" rows="4" placeholder="Enter instructions for this refinement step..."></textarea>
         </div>
     </div>
 </template>
 `;
 
-// Rest of the code remains exactly the same...
-const defaultInstructionBlocks = {
-    'review_response': {
-        label: 'Review Response',
-        content: 'Review the previous response against these instructions and return either a modified version that is compliant or return the initial response if already compliant.',
-        enabled: true
-    },
-    'enhance_response': {
-        label: 'Enhance Response',
-        content: 'Enhance the initial response while maintaining all original elements, incorporating the requested additions and enhancements.',
-        enabled: true
-    },
-    'ensure_coherency': {
-        label: 'Ensure Coherency',
-        content: 'Review the response to ensure it is realistic within the story context and aligns with likely actions of referenced characters or entities.',
-        enabled: true
-    },
-    'ensure_compliance': {
-        label: 'Ensure Compliance',
-        content: 'Adhere to any instructions provided in the immediately previous user response.',
-        enabled: true
-    },
-    'ensure_user_autonomy': {
-        label: 'Ensure User Autonomy',
-        content: 'Do not alter or dictate the user character\'s behavior in any way.',
-        enabled: false
-    },
-    'enhance_detail': {
-        label: 'Enhance Detail',
-        content: 'Provide more vivid and descriptive detail throughout the response.',
-        enabled: true
-    },
-    'enhance_disgust': {
-        label: 'Enhance Disgust',
-        content: 'Enhance disgusting content to a more revolting level of descriptive detail and horror.',
-        enabled: true
-    }
-};
-
-const defaultRefinementSteps = {
-    'cohesion_check': {
+// Default refinement steps
+const defaultRefinementSteps = [
+    {
         label: 'Cohesion Check',
         enabled: true,
-        instructions: [
-            { id: 'review_response', enabled: true },
-            { id: 'ensure_coherency', enabled: true },
-            { id: 'ensure_compliance', enabled: true },
-            { id: 'ensure_user_autonomy', enabled: false }
-        ]
+        instructions: `Review the response to ensure it:
+1. Is realistic within the story context
+2. Aligns with likely actions of referenced characters
+3. Adheres to any instructions in the previous user message
+4. Maintains consistency with established facts`
     },
-    'improve_detail': {
+    {
         label: 'Improve Detail',
         enabled: true,
-        instructions: [
-            { id: 'enhance_response', enabled: true },
-            { id: 'enhance_detail', enabled: true },
-            { id: 'enhance_disgust', enabled: true }
-        ]
+        instructions: `Enhance the response by:
+1. Adding more vivid and descriptive detail
+2. Expanding on important elements
+3. Improving the level of descriptive horror and disgust where present
+4. Maintaining all original elements while adding enhancements`
     }
-};
+];
 
 const defaultSettings = {
     enabled: true,
-    instructionBlocks: defaultInstructionBlocks,
     refinementSteps: defaultRefinementSteps
 };
 
@@ -161,35 +93,8 @@ async function loadSettings() {
     
     $("#enable_refinement").prop("checked", extensionSettings.enabled);
     
-    // Populate instruction blocks
-    renderInstructionBlocks();
-    
     // Populate refinement steps
     renderRefinementSteps();
-}
-
-function renderInstructionBlocks() {
-    console.log('Rendering instruction blocks...');
-    const container = $("#instruction_blocks_list");
-    container.empty();
-    
-    Object.entries(extensionSettings.instructionBlocks).forEach(([id, block]) => {
-        const template = document.querySelector("#instruction_block_template");
-        if (!template) {
-            console.error('Instruction block template not found');
-            return;
-        }
-        const clone = document.importNode(template.content, true);
-        
-        const item = $(clone.querySelector(".instruction-block-item"));
-        item.attr("data-id", id);
-        
-        item.find(".instruction-enabled").prop("checked", block.enabled);
-        item.find(".instruction-label").val(block.label);
-        item.find(".instruction-content").val(block.content);
-        
-        container.append(item);
-    });
 }
 
 function renderRefinementSteps() {
@@ -197,7 +102,7 @@ function renderRefinementSteps() {
     const container = $("#refinement_steps_list");
     container.empty();
     
-    Object.entries(extensionSettings.refinementSteps).forEach(([id, step]) => {
+    extensionSettings.refinementSteps.forEach((step, index) => {
         const template = document.querySelector("#refinement_step_template");
         if (!template) {
             console.error('Refinement step template not found');
@@ -206,27 +111,11 @@ function renderRefinementSteps() {
         const clone = document.importNode(template.content, true);
         
         const item = $(clone.querySelector(".refinement-step-item"));
-        item.attr("data-id", id);
+        item.attr("data-index", index);
         
         item.find(".step-enabled").prop("checked", step.enabled);
         item.find(".step-label").val(step.label);
-        
-        const instructionList = item.find(".step-instruction-list");
-        step.instructions.forEach(instruction => {
-            const block = extensionSettings.instructionBlocks[instruction.id];
-            if (block) {
-                const instructionItem = $('<div class="step-instruction-item"></div>');
-                instructionItem.attr("data-instruction-id", instruction.id);
-                
-                const checkbox = $('<input type="checkbox" class="instruction-enabled">');
-                checkbox.prop("checked", instruction.enabled);
-                
-                const label = $('<span class="instruction-label"></span>').text(block.label);
-                
-                instructionItem.append(checkbox, label);
-                instructionList.append(instructionItem);
-            }
-        });
+        item.find(".step-instructions").val(step.instructions);
         
         container.append(item);
     });
@@ -251,36 +140,26 @@ async function refineResponse(response, context) {
     
     const statusIndicator = $('#refinement_status');
     let currentResponse = response;
-    let stepCount = Object.values(extensionSettings.refinementSteps).filter(step => step.enabled).length;
+    let enabledSteps = extensionSettings.refinementSteps.filter(step => step.enabled);
+    let stepCount = enabledSteps.length;
     let currentStep = 0;
     
     console.log(`Processing ${stepCount} enabled refinement steps...`);
     
-    for (const [stepId, step] of Object.entries(extensionSettings.refinementSteps)) {
-        if (!step.enabled) {
-            console.log(`Skipping disabled step: ${step.label}`);
-            continue;
-        }
-        
+    for (const step of enabledSteps) {
         currentStep++;
         console.log(`Processing step ${currentStep}/${stepCount}: ${step.label}`);
         statusIndicator.text(`Refining response: Step ${currentStep}/${stepCount} (${step.label})`).show();
         
-        // Combine enabled instructions for this step
-        const instructions = step.instructions
-            .filter(inst => inst.enabled && extensionSettings.instructionBlocks[inst.id]?.enabled)
-            .map(inst => extensionSettings.instructionBlocks[inst.id].content)
-            .join('\n\n');
-            
-        if (!instructions) {
-            console.log('No enabled instructions for this step, skipping');
+        if (!step.instructions) {
+            console.log('No instructions for this step, skipping');
             continue;
         }
         
-        console.log('Combined instructions:', instructions);
+        console.log('Step instructions:', step.instructions);
         
         // Create system message for refinement
-        const systemMessage = `You are a response refinement agent. Your task is to refine the following response according to these instructions:\n\n${instructions}\n\nProvide your refined version of the response, or return the original if it already meets all requirements.`;
+        const systemMessage = `You are a response refinement agent. Your task is to refine the following response according to these instructions:\n\n${step.instructions}\n\nProvide your refined version of the response, or return the original if it already meets all requirements.`;
         
         try {
             console.log('Generating refined response...');
@@ -319,151 +198,43 @@ function onEnableChange() {
     saveSettingsDebounced();
 }
 
-function onInstructionBlockChange(event) {
-    const block = $(event.target).closest(".instruction-block-item");
-    const id = block.attr("data-id");
-    
-    console.log(`Instruction block ${id} changed`);
-    
-    extensionSettings.instructionBlocks[id] = {
-        enabled: block.find(".instruction-enabled").prop("checked"),
-        label: block.find(".instruction-label").val(),
-        content: block.find(".instruction-content").val()
-    };
-    
-    saveSettingsDebounced();
-}
-
 function onRefinementStepChange(event) {
     const step = $(event.target).closest(".refinement-step-item");
-    const id = step.attr("data-id");
+    const index = parseInt(step.attr("data-index"));
     
-    console.log(`Refinement step ${id} changed`);
+    console.log(`Refinement step ${index} changed`);
     
-    const instructions = [];
-    step.find(".step-instruction-item").each(function() {
-        instructions.push({
-            id: $(this).attr("data-instruction-id"),
-            enabled: $(this).find(".instruction-enabled").prop("checked")
-        });
-    });
-    
-    extensionSettings.refinementSteps[id] = {
+    extensionSettings.refinementSteps[index] = {
         enabled: step.find(".step-enabled").prop("checked"),
         label: step.find(".step-label").val(),
-        instructions: instructions
+        instructions: step.find(".step-instructions").val()
     };
     
-    saveSettingsDebounced();
-}
-
-function addNewInstructionBlock() {
-    console.log('Adding new instruction block');
-    const id = 'custom_' + Date.now();
-    extensionSettings.instructionBlocks[id] = {
-        label: 'New Instruction Block',
-        content: '',
-        enabled: true
-    };
-    
-    renderInstructionBlocks();
     saveSettingsDebounced();
 }
 
 function addNewRefinementStep() {
     console.log('Adding new refinement step');
-    const id = 'custom_' + Date.now();
-    extensionSettings.refinementSteps[id] = {
+    extensionSettings.refinementSteps.push({
         label: 'New Step',
         enabled: true,
-        instructions: []
-    };
-    
-    renderRefinementSteps();
-    saveSettingsDebounced();
-}
-
-function deleteInstructionBlock(event) {
-    const block = $(event.target).closest(".instruction-block-item");
-    const id = block.attr("data-id");
-    
-    console.log(`Deleting instruction block ${id}`);
-    
-    delete extensionSettings.instructionBlocks[id];
-    
-    // Remove this instruction from any steps using it
-    Object.values(extensionSettings.refinementSteps).forEach(step => {
-        step.instructions = step.instructions.filter(inst => inst.id !== id);
+        instructions: ''
     });
     
-    renderInstructionBlocks();
     renderRefinementSteps();
     saveSettingsDebounced();
 }
 
 function deleteRefinementStep(event) {
     const step = $(event.target).closest(".refinement-step-item");
-    const id = step.attr("data-id");
+    const index = parseInt(step.attr("data-index"));
     
-    console.log(`Deleting refinement step ${id}`);
+    console.log(`Deleting refinement step ${index}`);
     
-    delete extensionSettings.refinementSteps[id];
+    extensionSettings.refinementSteps.splice(index, 1);
     
     renderRefinementSteps();
     saveSettingsDebounced();
-}
-
-function addInstructionToStep(event) {
-    const step = $(event.target).closest(".refinement-step-item");
-    const stepId = step.attr("data-id");
-    
-    console.log(`Adding instruction to step ${stepId}`);
-    
-    // Create dropdown with available instruction blocks
-    const select = $('<select></select>');
-    Object.entries(extensionSettings.instructionBlocks).forEach(([id, block]) => {
-        if (!extensionSettings.refinementSteps[stepId].instructions.some(i => i.id === id)) {
-            select.append($('<option></option>').attr('value', id).text(block.label));
-        }
-    });
-    
-    if (select.children().length === 0) {
-        toastr.info('No more instruction blocks available to add');
-        return;
-    }
-    
-    // Show popup for selection
-    const popup = $('<div class="popup"></div>')
-        .append('<h4>Select Instruction Block</h4>')
-        .append(select)
-        .append(
-            $('<div class="flex-container"></div>')
-                .append($('<div class="menu_button">Add</div>').on('click', () => {
-                    const selectedId = select.val();
-                    extensionSettings.refinementSteps[stepId].instructions.push({
-                        id: selectedId,
-                        enabled: true
-                    });
-                    renderRefinementSteps();
-                    saveSettingsDebounced();
-                    popup.remove();
-                }))
-                .append($('<div class="menu_button">Cancel</div>').on('click', () => {
-                    popup.remove();
-                }))
-        );
-    
-    $('body').append(popup);
-    popup.css({
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        backgroundColor: 'var(--background-color)',
-        padding: '20px',
-        borderRadius: '5px',
-        zIndex: 1000
-    });
 }
 
 // Initialize
@@ -483,14 +254,10 @@ jQuery(async () => {
         console.log('Setting up event listeners...');
         // Event listeners
         $("#enable_refinement").on("change", onEnableChange);
-        $("#add_instruction_block").on("click", addNewInstructionBlock);
         $("#add_refinement_step").on("click", addNewRefinementStep);
         
-        $(document).on("change", ".instruction-block-item input, .instruction-block-item textarea", onInstructionBlockChange);
-        $(document).on("change", ".refinement-step-item input", onRefinementStepChange);
-        $(document).on("click", ".instruction-delete", deleteInstructionBlock);
+        $(document).on("change", ".refinement-step-item input, .refinement-step-item textarea", onRefinementStepChange);
         $(document).on("click", ".step-delete", deleteRefinementStep);
-        $(document).on("click", ".add-step-instruction", addInstructionToStep);
         
         console.log('Setting up message event handler...');
         // Hook into message events
