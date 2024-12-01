@@ -4,7 +4,11 @@ import { saveSettingsDebounced, eventSource, event_types, generateQuietPrompt } 
 const extensionName = "response-refinement";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
-// Default instruction blocks
+// Add debug logging
+console.log('Response Refinement extension loading...');
+console.log('Extension path:', extensionFolderPath);
+
+// Default instruction blocks and steps remain the same...
 const defaultInstructionBlocks = {
     'review_response': {
         label: 'Review Response',
@@ -43,7 +47,6 @@ const defaultInstructionBlocks = {
     }
 };
 
-// Default refinement steps
 const defaultRefinementSteps = {
     'cohesion_check': {
         label: 'Cohesion Check',
@@ -76,11 +79,14 @@ let extensionSettings = extension_settings[extensionName];
 
 // Load or initialize settings
 async function loadSettings() {
+    console.log('Loading Response Refinement settings...');
     extension_settings[extensionName] = extension_settings[extensionName] || {};
     if (Object.keys(extension_settings[extensionName]).length === 0) {
+        console.log('Initializing default settings...');
         Object.assign(extension_settings[extensionName], defaultSettings);
     }
     extensionSettings = extension_settings[extensionName];
+    console.log('Current settings:', extensionSettings);
     
     $("#enable_refinement").prop("checked", extensionSettings.enabled);
     
@@ -92,6 +98,7 @@ async function loadSettings() {
 }
 
 function renderInstructionBlocks() {
+    console.log('Rendering instruction blocks...');
     const container = $("#instruction_blocks_list");
     container.empty();
     
@@ -111,6 +118,7 @@ function renderInstructionBlocks() {
 }
 
 function renderRefinementSteps() {
+    console.log('Rendering refinement steps...');
     const container = $("#refinement_steps_list");
     container.empty();
     
@@ -147,23 +155,36 @@ function renderRefinementSteps() {
 
 // Create status indicator
 function createStatusIndicator() {
+    console.log('Creating status indicator...');
     const indicator = $('<div id="refinement_status" style="display: none; position: fixed; bottom: 10px; right: 10px; background-color: var(--accent-color); color: var(--text-color); padding: 10px; border-radius: 5px; z-index: 1000;"></div>');
     $('body').append(indicator);
     return indicator;
 }
 
 async function refineResponse(response, context) {
-    if (!extensionSettings.enabled) return response;
+    console.log('Starting response refinement...');
+    console.log('Initial response:', response);
+    
+    if (!extensionSettings.enabled) {
+        console.log('Refinement disabled, returning original response');
+        return response;
+    }
     
     const statusIndicator = $('#refinement_status');
     let currentResponse = response;
     let stepCount = Object.values(extensionSettings.refinementSteps).filter(step => step.enabled).length;
     let currentStep = 0;
     
+    console.log(`Processing ${stepCount} enabled refinement steps...`);
+    
     for (const [stepId, step] of Object.entries(extensionSettings.refinementSteps)) {
-        if (!step.enabled) continue;
+        if (!step.enabled) {
+            console.log(`Skipping disabled step: ${step.label}`);
+            continue;
+        }
         
         currentStep++;
+        console.log(`Processing step ${currentStep}/${stepCount}: ${step.label}`);
         statusIndicator.text(`Refining response: Step ${currentStep}/${stepCount} (${step.label})`).show();
         
         // Combine enabled instructions for this step
@@ -172,19 +193,28 @@ async function refineResponse(response, context) {
             .map(inst => extensionSettings.instructionBlocks[inst.id].content)
             .join('\n\n');
             
-        if (!instructions) continue;
+        if (!instructions) {
+            console.log('No enabled instructions for this step, skipping');
+            continue;
+        }
+        
+        console.log('Combined instructions:', instructions);
         
         // Create system message for refinement
         const systemMessage = `You are a response refinement agent. Your task is to refine the following response according to these instructions:\n\n${instructions}\n\nProvide your refined version of the response, or return the original if it already meets all requirements.`;
         
         try {
+            console.log('Generating refined response...');
             // Generate refined response
             const refinedResponse = await generateQuietPrompt(
                 systemMessage + '\n\nOriginal response:\n' + currentResponse
             );
             
             if (refinedResponse && refinedResponse.trim()) {
+                console.log('Response refined successfully');
                 currentResponse = refinedResponse.trim();
+            } else {
+                console.log('No changes needed for this step');
             }
         } catch (error) {
             console.error(`Error in refinement step ${step.label}:`, error);
@@ -194,7 +224,10 @@ async function refineResponse(response, context) {
     
     statusIndicator.hide();
     if (currentResponse !== response) {
+        console.log('Response was modified during refinement');
         toastr.success('Response has been refined');
+    } else {
+        console.log('Response remained unchanged after refinement');
     }
     
     return currentResponse;
@@ -202,6 +235,7 @@ async function refineResponse(response, context) {
 
 // Event Handlers
 function onEnableChange() {
+    console.log('Enable/disable changed');
     extensionSettings.enabled = $("#enable_refinement").prop("checked");
     saveSettingsDebounced();
 }
@@ -209,6 +243,8 @@ function onEnableChange() {
 function onInstructionBlockChange(event) {
     const block = $(event.target).closest(".instruction-block-item");
     const id = block.attr("data-id");
+    
+    console.log(`Instruction block ${id} changed`);
     
     extensionSettings.instructionBlocks[id] = {
         enabled: block.find(".instruction-enabled").prop("checked"),
@@ -222,6 +258,8 @@ function onInstructionBlockChange(event) {
 function onRefinementStepChange(event) {
     const step = $(event.target).closest(".refinement-step-item");
     const id = step.attr("data-id");
+    
+    console.log(`Refinement step ${id} changed`);
     
     const instructions = [];
     step.find(".step-instruction-item").each(function() {
@@ -241,6 +279,7 @@ function onRefinementStepChange(event) {
 }
 
 function addNewInstructionBlock() {
+    console.log('Adding new instruction block');
     const id = 'custom_' + Date.now();
     extensionSettings.instructionBlocks[id] = {
         label: 'New Instruction Block',
@@ -253,6 +292,7 @@ function addNewInstructionBlock() {
 }
 
 function addNewRefinementStep() {
+    console.log('Adding new refinement step');
     const id = 'custom_' + Date.now();
     extensionSettings.refinementSteps[id] = {
         label: 'New Step',
@@ -267,6 +307,8 @@ function addNewRefinementStep() {
 function deleteInstructionBlock(event) {
     const block = $(event.target).closest(".instruction-block-item");
     const id = block.attr("data-id");
+    
+    console.log(`Deleting instruction block ${id}`);
     
     delete extensionSettings.instructionBlocks[id];
     
@@ -284,6 +326,8 @@ function deleteRefinementStep(event) {
     const step = $(event.target).closest(".refinement-step-item");
     const id = step.attr("data-id");
     
+    console.log(`Deleting refinement step ${id}`);
+    
     delete extensionSettings.refinementSteps[id];
     
     renderRefinementSteps();
@@ -293,6 +337,8 @@ function deleteRefinementStep(event) {
 function addInstructionToStep(event) {
     const step = $(event.target).closest(".refinement-step-item");
     const stepId = step.attr("data-id");
+    
+    console.log(`Adding instruction to step ${stepId}`);
     
     // Create dropdown with available instruction blocks
     const select = $('<select></select>');
@@ -343,36 +389,57 @@ function addInstructionToStep(event) {
 
 // Initialize
 jQuery(async () => {
-    const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
-    // Add to extensions_settings2 since this is a UI-related extension
-    $("#extensions_settings2").append(settingsHtml);
+    console.log('Initializing Response Refinement extension...');
     
-    // Create status indicator
-    createStatusIndicator();
-    
-    // Event listeners
-    $("#enable_refinement").on("change", onEnableChange);
-    $("#add_instruction_block").on("click", addNewInstructionBlock);
-    $("#add_refinement_step").on("click", addNewRefinementStep);
-    
-    $(document).on("change", ".instruction-block-item input, .instruction-block-item textarea", onInstructionBlockChange);
-    $(document).on("change", ".refinement-step-item input", onRefinementStepChange);
-    $(document).on("click", ".instruction-delete", deleteInstructionBlock);
-    $(document).on("click", ".step-delete", deleteRefinementStep);
-    $(document).on("click", ".add-step-instruction", addInstructionToStep);
-    
-    // Hook into message events
-    eventSource.on(event_types.MESSAGE_RECEIVED, async (data) => {
-        if (!extensionSettings.enabled) return;
+    try {
+        console.log('Loading settings HTML...');
+        const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
+        console.log('Settings HTML loaded, appending to UI...');
+        $("#extensions_settings2").append(settingsHtml);
         
-        const refinedResponse = await refineResponse(data.message);
-        if (refinedResponse !== data.message) {
-            data.message = refinedResponse;
-        }
-    });
-    
-    await loadSettings();
-    
-    // Show initial setup message
-    toastr.success('Response Refinement extension loaded! Configure settings in the Extensions tab.');
+        console.log('Creating status indicator...');
+        createStatusIndicator();
+        
+        console.log('Setting up event listeners...');
+        // Event listeners
+        $("#enable_refinement").on("change", onEnableChange);
+        $("#add_instruction_block").on("click", addNewInstructionBlock);
+        $("#add_refinement_step").on("click", addNewRefinementStep);
+        
+        $(document).on("change", ".instruction-block-item input, .instruction-block-item textarea", onInstructionBlockChange);
+        $(document).on("change", ".refinement-step-item input", onRefinementStepChange);
+        $(document).on("click", ".instruction-delete", deleteInstructionBlock);
+        $(document).on("click", ".step-delete", deleteRefinementStep);
+        $(document).on("click", ".add-step-instruction", addInstructionToStep);
+        
+        console.log('Setting up message event handler...');
+        // Hook into message events
+        eventSource.on(event_types.MESSAGE_RECEIVED, async (data) => {
+            console.log('Message received event triggered');
+            if (!extensionSettings.enabled) {
+                console.log('Extension disabled, skipping refinement');
+                return;
+            }
+            
+            console.log('Processing message for refinement...');
+            const refinedResponse = await refineResponse(data.message);
+            if (refinedResponse !== data.message) {
+                console.log('Message was refined, updating...');
+                data.message = refinedResponse;
+            } else {
+                console.log('No refinement needed');
+            }
+        });
+        
+        console.log('Loading settings...');
+        await loadSettings();
+        
+        console.log('Showing setup message...');
+        toastr.success('Response Refinement extension loaded! Configure settings in the Extensions tab.');
+        
+        console.log('Extension initialization complete');
+    } catch (error) {
+        console.error('Error initializing Response Refinement extension:', error);
+        toastr.error('Failed to initialize Response Refinement extension');
+    }
 });
