@@ -209,6 +209,10 @@ async function refineResponse(response, context) {
     
     console.log(`Processing ${stepCount} enabled refinement steps...`);
     
+    // Save current chat context
+    const appContext = getContext();
+    const originalChat = appContext.chat;
+    
     for (const step of enabledSteps) {
         currentStep++;
         console.log(`Processing step ${currentStep}/${stepCount}: ${step.label}`);
@@ -223,6 +227,10 @@ async function refineResponse(response, context) {
         
         try {
             console.log('Generating refined response...');
+            
+            // Temporarily clear chat context
+            appContext.chat = [];
+            
             // Generate refined response with minimal context
             const prompt = [
                 'System: You are a response refinement agent. Your task is to refine an existing response according to specific instructions. Do not generate new content or continue the response - only refine what is provided.',
@@ -241,6 +249,9 @@ async function refineResponse(response, context) {
             
             const refinedResponse = await generateQuietPrompt(prompt);
             
+            // Restore original chat context
+            appContext.chat = originalChat;
+            
             if (refinedResponse && refinedResponse.trim()) {
                 console.log('Response refined successfully');
                 currentResponse = refinedResponse.trim();
@@ -250,6 +261,8 @@ async function refineResponse(response, context) {
         } catch (error) {
             console.error(`Error in refinement step ${step.label}:`, error);
             toastr.error(`Failed to refine response in step: ${step.label}`);
+            // Ensure chat context is restored even if there's an error
+            appContext.chat = originalChat;
         }
     }
     
